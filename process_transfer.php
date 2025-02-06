@@ -12,6 +12,31 @@ ini_set('display_errors', 1);
 
 // Set timezone to Thailand
 date_default_timezone_set('Asia/Bangkok');
+
+
+function sendTelegramNotify($message) {
+    $token = "8134810874:AAEClDIW1U90KpjssRYCG0IypWrSdYmWyPA";
+    $chat_id = "-4659750493";
+    $url = "https://api.telegram.org/bot{$token}/sendMessage";
+    
+    $data = [
+        'chat_id' => $chat_id,
+        'text' => $message,
+        'parse_mode' => 'HTML'
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    return $response;
+}
+
 function sendLineNotifyLog($message) {
     $url = "https://notify-api.line.me/api/notify";
     $token = '4pnrCCRs3fAyw9oLL1UCiefrkWyuYadNSXUHqkYxQxB'; // แทนที่ด้วย token ของคุณ
@@ -110,6 +135,13 @@ function check_duplicate_transfer($bank_account_no, $amount) {
 
 function process_action($action, $data) {
     switch ($action) {
+        case 'getRecipientName':
+            $TMNOne = new TMNOne();
+            $TMNOne->setData($data['tmn_key_id'], $data['mobile_number'], $data['login_token'], $data['tmn_id']);
+            $TMNOne->loginWithPin6($data['pin']);
+            $recipientName = $TMNOne->getRecipientName($data['payee_wallet_id']);
+            return ['success' => true, 'recipient_name' => $recipientName];
+            
         case 'getBalance':
             $TMNOne = new TMNOne();
             $TMNOne->setData($data['tmn_key_id'], $data['mobile_number'], $data['login_token'], $data['tmn_id']);
@@ -142,8 +174,19 @@ function process_action($action, $data) {
                 
                 $conn = get_connection();
                 $date_time = date('Y-m-d H:i:s');
-                $message = "การโอนเงินสำเร็จ!\nเบอร์โทรศัพท์: {$data['payee_wallet_id']}\nจำนวนเงิน: {$data['amount']} บาท\nพนักงาน: {$employee['employee_name']}\nเวลา: {$date_time}";
-                sendLineNotify($message);
+                $recipientName = $TMNOne->getRecipientName($data['payee_wallet_id']);
+                $message = "การโอนเงินสำเร็จ!\nเบอร์โทรศัพท์: {$data['payee_wallet_id']}\nชื่อลูกค้า: {$recipientName}\nจำนวนเงิน: {$data['amount']} บาท\nพนักงาน: {$employee['employee_name']}\nเวลา: {$date_time}";
+                // sendLineNotify($message);
+
+                // ส่งแจ้งเตือน Telegram แบบ HTML formatting
+                $telegram_message = "<b>True Wallet โอนเงินสำเร็จ!</b>\n"
+                                . "เบอร์โทรศัพท์: {$data['payee_wallet_id']}\n"
+                                . "ชื่อลูกค้า: {$recipientName}\n"
+                                . "จำนวนเงิน: {$data['amount']} บาท\n"
+                                . "พนักงาน: {$employee['employee_name']}\n"
+                                . "เวลา: {$date_time}";
+                sendTelegramNotify($telegram_message);
+                
                 // Insert into tranferlog_bl_ptop
                 $stmt = $conn->prepare("INSERT INTO tranferlog_lucky_ptop (amount, date_time, bankAccountNo) VALUES (:amount, :date_time, :bank_account_no)");
                 $stmt->execute([
@@ -161,8 +204,18 @@ function process_action($action, $data) {
                     'employee_name' => $employee['employee_name'],
                     'employee_id' => $data['employee_id']
                 ]);
-                // $message = "การโอนเงินสำเร็จ!\nเบอร์โทรศัพท์: {$data['mobile_number']}\nจำนวนเงิน: {$data['amount']}\nพนักงาน: {$employee['employee_name']}\nเวลา: {$date_time}";
-                // sendLineNotify($message);
+
+                $stmt = $conn->prepare("INSERT INTO tranferlogall (phonenumber, customername, amount, date_time, employee_name, employee_id, prefix_wep,datalog) VALUES (:phonenumber, :customername, :amount, :date_time, :employee_name, :employee_id, :prefix_wep,:datalog)");
+                $stmt->execute([
+                    'phonenumber' => $data['payee_wallet_id'],
+                    'customername' => $recipientName,
+                    'amount' => $data['amount'],
+                    'date_time' => $date_time,
+                    'employee_name' => $employee['employee_name'],
+                    'employee_id' => $data['employee_id'],
+                    'prefix_wep' => 'lucky',
+                    'datalog' => ''
+                ]);
 
 
                 return [

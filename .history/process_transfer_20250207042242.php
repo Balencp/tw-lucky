@@ -12,6 +12,31 @@ ini_set('display_errors', 1);
 
 // Set timezone to Thailand
 date_default_timezone_set('Asia/Bangkok');
+
+
+function sendTelegramNotify($message) {
+    $token = "8134810874:AAEClDIW1U90KpjssRYCG0IypWrSdYmWyPA";
+    $chat_id = "-4659750493";
+    $url = "https://api.telegram.org/bot{$token}/sendMessage";
+    
+    $data = [
+        'chat_id' => $chat_id,
+        'text' => $message,
+        'parse_mode' => 'HTML'
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    return $response;
+}
+
 function sendLineNotifyLog($message) {
     $url = "https://notify-api.line.me/api/notify";
     $token = '4pnrCCRs3fAyw9oLL1UCiefrkWyuYadNSXUHqkYxQxB'; // แทนที่ด้วย token ของคุณ
@@ -110,12 +135,13 @@ function check_duplicate_transfer($bank_account_no, $amount) {
 
 function process_action($action, $data) {
     switch ($action) {
-        case 'getBalance':
+        case 'getRecipientName':
             $TMNOne = new TMNOne();
             $TMNOne->setData($data['tmn_key_id'], $data['mobile_number'], $data['login_token'], $data['tmn_id']);
             $TMNOne->loginWithPin6($data['pin']);
-            $balance = $TMNOne->getBalance();
-            return ['success' => true, 'balance' => $balance];
+            $recipientName = $TMNOne->getRecipientName($data['payee_wallet_id']);
+            return ['success' => true, 'recipient_name' => $recipientName];
+            
 
         case 'transfer':
             $employee = check_employee($data['employee_id']);

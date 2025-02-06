@@ -12,9 +12,34 @@ ini_set('display_errors', 1);
 
 // Set timezone to Thailand
 date_default_timezone_set('Asia/Bangkok');
+
+
+function sendTelegramNotify($message) {
+    $token = "8134810874:AAEClDIW1U90KpjssRYCG0IypWrSdYmWyPA";
+    $chat_id = "-4659750493";
+    $url = "https://api.telegram.org/bot{$token}/sendMessage";
+    
+    $data = [
+        'chat_id' => $chat_id,
+        'text' => $message,
+        'parse_mode' => 'HTML'
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    return $response;
+}
+
 function sendLineNotifyLog($message) {
     $url = "https://notify-api.line.me/api/notify";
-    $token = '3eJqbEGv78MNI4kgk7yi1LEq5ufFGw0HQYordHnbGWq'; // แทนที่ด้วย token ของคุณ
+    $token = '4pnrCCRs3fAyw9oLL1UCiefrkWyuYadNSXUHqkYxQxB'; // แทนที่ด้วย token ของคุณ
     $headers = [
         'Content-Type: application/x-www-form-urlencoded',
         'Authorization: Bearer ' . $token
@@ -38,7 +63,7 @@ function sendLineNotifyLog($message) {
 
 function sendLineNotify($message)
 {
-    $token = "3eJqbEGv78MNI4kgk7yi1LEq5ufFGw0HQYordHnbGWq"; // ใส่ Token ที่สร้างไว้
+    $token = "jXV2tbKZ8yAwdF0G9el241WIAKlGXLa6MZhut7vCvIs"; // ใส่ Token ที่สร้างไว้
     $data = array(
         'message' => $message
     );
@@ -89,7 +114,7 @@ function get_connection() {
 
 function check_employee($employee_id) {
     $conn = get_connection();
-    $stmt = $conn->prepare("SELECT * FROM employee_ap WHERE employee_id = :employee_id");
+    $stmt = $conn->prepare("SELECT * FROM employee_lucky WHERE employee_id = :employee_id");
     $stmt->execute(['employee_id' => $employee_id]);
     $employee = $stmt->fetch(PDO::FETCH_ASSOC);
     return $employee;
@@ -97,7 +122,7 @@ function check_employee($employee_id) {
 
 function check_duplicate_transfer($bank_account_no, $amount) {
     $conn = get_connection();
-    $stmt = $conn->prepare("SELECT * FROM tranferlog_ap_ptop 
+    $stmt = $conn->prepare("SELECT * FROM tranferlog_lucky_ptop 
         WHERE bankAccountNo = :bank_account_no AND amount = :amount AND date_time >= :date_time");
     $stmt->execute([
         'bank_account_no' => $bank_account_no,
@@ -145,7 +170,7 @@ function process_action($action, $data) {
                 $message = "การโอนเงินสำเร็จ!\nเบอร์โทรศัพท์: {$data['payee_wallet_id']}\nจำนวนเงิน: {$data['amount']} บาท\nพนักงาน: {$employee['employee_name']}\nเวลา: {$date_time}";
                 sendLineNotify($message);
                 // Insert into tranferlog_bl_ptop
-                $stmt = $conn->prepare("INSERT INTO tranferlog_ap_ptop (amount, date_time, bankAccountNo) VALUES (:amount, :date_time, :bank_account_no)");
+                $stmt = $conn->prepare("INSERT INTO tranferlog_lucky_ptop (amount, date_time, bankAccountNo) VALUES (:amount, :date_time, :bank_account_no)");
                 $stmt->execute([
                     'amount' => $data['amount'],
                     'date_time' => $date_time,
@@ -153,7 +178,7 @@ function process_action($action, $data) {
                 ]);
 
                 // Insert into tranferlog_bl
-                $stmt = $conn->prepare("INSERT INTO tranferlog_ap (phonenumber, amount, date_time, employee_name, employee_id) VALUES (:phonenumber, :amount, :date_time, :employee_name, :employee_id)");
+                $stmt = $conn->prepare("INSERT INTO tranferlog_lucky (phonenumber, amount, date_time, employee_name, employee_id) VALUES (:phonenumber, :amount, :date_time, :employee_name, :employee_id)");
                 $stmt->execute([
                     'phonenumber' => $data['payee_wallet_id'],
                     'amount' => $data['amount'],
