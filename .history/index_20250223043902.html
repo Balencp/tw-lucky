@@ -47,7 +47,7 @@
             <select id="account"
                 class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                 <option value="" disabled selected>กรุณาเลือกบัญชี</option>
-                <option value="1">บัญชี 1 (0660674510)</option>
+                <option value="1">บัญชี 1 (0646127576)</option>
             </select>
         </div>
 
@@ -114,11 +114,11 @@
     <script>
         const accounts = {
             '1': {
-                tmn_key_id: '10591',
-                mobile_number: '0660674510',
-                login_token: 'L-ac204842-27b2-485b-ae6c-6b7cbfeebc80',
-                pin: '828965',
-                tmn_id: 'tmn.10115025064'
+                tmn_key_id: 'x437a045179',
+                mobile_number: '0646127576',
+                login_token: 'L-a4241d38-c8aa-4f4d-8db1-5ed839aa946c',
+                pin: '121314',
+                tmn_id: 'tmn.10092853168'
             },
             '2': {
                 tmn_key_id: '00000',
@@ -224,7 +224,7 @@
             showLoader();
 
             try {
-                const result = await fetchAPI('transfer', {
+                const result = await fetchAPI('transferp2p', {
                     ...selectedAccount,
                     employee_id: employeeId,
                     payee_wallet_id: payeeWalletId,
